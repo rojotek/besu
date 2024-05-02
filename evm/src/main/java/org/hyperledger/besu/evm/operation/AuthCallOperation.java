@@ -62,39 +62,5 @@ public class AuthCallOperation extends AbstractOperation {
     }
   }
 
-  @Override
-  public long cost(final MessageFrame frame) {
-    final long baseCost = gasCalculator().getBaseTierGasCost();
-    final long additionalCosts = calculateAdditionalCosts(frame);
-    return baseCost + additionalCosts;
-  }
-
-  private long calculateAdditionalCosts(final MessageFrame frame) {
-    long additionalCosts = 0;
-    // Actual logic for additional gas cost calculation as per EIP-3074
-    // This should include calculations for things like cold account access and new account creation
-    // Refer to EIP-3074 for the specific conditions and costs
-    // Example calculation (this is just a placeholder and should be replaced with actual logic):
-    if (isColdAccountAccess(frame)) {
-      additionalCosts += gasCalculator().getColdAccountAccessCost();
-    }
-    if (isNewAccountCreation(frame)) {
-      // Placeholder for new account creation cost calculation
-      // The actual method call will depend on the GasCalculator implementation
-      // additionalCosts += gasCalculator().getNewAccountCreationCost();
-    }
-    return additionalCosts;
-  }
-
-  // Placeholder methods for additional gas cost conditions
-  // These should be implemented according to the logic required by EIP-3074
-  private boolean isColdAccountAccess(final MessageFrame frame) {
-    // Placeholder logic for determining cold account access
-    return false;
-  }
-
-  private boolean isNewAccountCreation(final MessageFrame frame) {
-    // Placeholder logic for determining new account creation
-    return false;
-  }
+  // Removed the @Override annotation and the cost method as it is not part of the Operation interface
 }
