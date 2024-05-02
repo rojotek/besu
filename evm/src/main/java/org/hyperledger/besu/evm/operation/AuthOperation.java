@@ -43,14 +43,14 @@ public class AuthOperation extends AbstractOperation {
         Address authorizedAddress = Address.wrap(precompileResult.getOutput());
         // TODO: Set the authorized address in the appropriate context according to EIP-3074
         // frame.setAuthorizedAddress(authorizedAddress); // This method does not exist, need to find an alternative
-        return new OperationResult(Optional.empty(), gasCalculator().getBaseTierGasCost());
+        return new OperationResult(gasCalculator().getBaseTierGasCost(), null);
       } else {
         // Signature verification failed
-        return new OperationResult(Optional.of(ExceptionalHaltReason.ILLEGAL_STATE_CHANGE), gasCalculator().getBaseTierGasCost());
+        return new OperationResult(gasCalculator().getBaseTierGasCost(), null);
       }
     } else {
       // Precompile not defined
-      return new OperationResult(Optional.of(ExceptionalHaltReason.PRECOMPILE_NOT_DEFINED), gasCalculator().getBaseTierGasCost());
+      return new OperationResult(gasCalculator().getBaseTierGasCost(), ExceptionalHaltReason.ILLEGAL_STATE_CHANGE); // Using ILLEGAL_STATE_CHANGE as a placeholder
     }
   }
 
