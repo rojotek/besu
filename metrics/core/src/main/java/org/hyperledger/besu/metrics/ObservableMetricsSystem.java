@@ -14,8 +14,7 @@
  */
 package org.hyperledger.besu.metrics;
 
-import org.hyperledger.besu.plugin.services.MetricsSystem;
-import org.hyperledger.besu.plugin.services.metrics.MetricCategory;
+import org.hyperledger.besu.metrics.common.MetricCategory;
 
 import java.util.Set;
 import java.util.stream.Stream;

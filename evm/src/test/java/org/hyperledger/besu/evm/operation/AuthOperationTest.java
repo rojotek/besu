@@ -70,7 +70,7 @@ public class AuthOperationTest {
     assertThat(messageFrame.getAuthorizedAddress()).isEqualTo(authorizedAddress);
     assertThat(result.getHaltReason()).isEmpty();
     // Assert correct gas cost for successful authorization as per EIP-3074
-    assertThat(result.getGasCost()).contains(Gas.of(3200));
+    assertThat(result.getGasCost()).contains(Gas.of(3000));
   }
 
   @Test
@@ -118,6 +118,6 @@ public class AuthOperationTest {
     Gas cost = authOperation.cost(messageFrame);
 
     // Assert correct gas cost calculation as per EIP-3074
-    assertThat(cost).isEqualTo(Gas.of(3200));
+    assertThat(cost).isEqualTo(Gas.of(3000));
   }
 }

@@ -2,14 +2,13 @@ package org.hyperledger.besu.evm.operation;
 
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Bytes;
-import org.hyperledger.besu.datatypes.Gas;
 import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.evm.precompile.PrecompileContract;
 import org.hyperledger.besu.evm.precompile.PrecompileContractRegistry;
-import org.hyperledger.besu.metrics.OperationTimer;
-import org.hyperledger.besu.plugin.services.MetricsSystem;
+import org.hyperledger.besu.plugin.services.metrics.MetricsSystem;
+import org.hyperledger.besu.plugin.services.metrics.OperationTimer;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -69,16 +68,12 @@ public class AuthCallOperationTest {
     // Check that the authorized address is set correctly in the message frame
     assertThat(messageFrame.getAuthorizedAddress()).isEqualTo(authorizedAddress);
     assertThat(result.getHaltReason()).isEmpty();
-    // Assert correct gas cost for successful AUTHCALL as per EIP-3074
     // Dynamic gas cost components
-    int coldAccountAccessCost = 2600; // From EIP-2929
-    int valueTransferCost = 0; // Additional cost if value > 0
-    int emptyAddressCost = 0; // Additional cost if address is empty
-    // Assuming for test purposes that the address is not in the accessed addresses set and value is 0
-    int dynamicGasCost = coldAccountAccessCost - gasCalculator.getWarmStorageReadCost().toInt(); // cold_account_access_cost - warm_storage_read_cost
-    // Assuming for test purposes that the address is not empty
+    int coldAccountAccessCost = messageFrame.isAddressInAccessedAddresses(authorizedAddress) ? 0 : 2600; // From EIP-2929, only if address not accessed
+    int valueTransferCost = messageFrame.getValue().isZero() ? 0 : 9000; // Additional cost if value > 0, from EIP-7
+    int emptyAddressCost = messageFrame.getWorldState().get(authorizedAddress).isEmpty() ? 25000 : 0; // Additional cost if address is empty, from EIP-2
     // Calculate the total expected gas cost
-    Gas expectedGasCost = Gas.of(gasCalculator.getWarmStorageReadCost().toInt() + dynamicGasCost + valueTransferCost + emptyAddressCost);
+    Gas expectedGasCost = Gas.of(gasCalculator.getWarmStorageReadCost().toInt() + coldAccountAccessCost + valueTransferCost + emptyAddressCost);
     assertThat(result.getGasCost()).contains(expectedGasCost);
   }
 
@@ -98,16 +93,12 @@ public class AuthCallOperationTest {
     // Check that the message frame does not set an authorized address
     assertThat(messageFrame.getAuthorizedAddress()).isNull();
     assertThat(result.getHaltReason()).contains(ExceptionalHaltReason.ILLEGAL_STATE_CHANGE);
-    // Assert correct gas cost for failed AUTHCALL as per EIP-3074
     // Dynamic gas cost components
-    int coldAccountAccessCost = 2600; // From EIP-2929
-    int valueTransferCost = 0; // Additional cost if value > 0
-    int emptyAddressCost = 0; // Additional cost if address is empty
-    // Assuming for test purposes that the address is not in the accessed addresses set and value is 0
-    int dynamicGasCost = coldAccountAccessCost - gasCalculator.getWarmStorageReadCost().toInt(); // cold_account_access_cost - warm_storage_read_cost
-    // Assuming for test purposes that the address is not empty
+    int coldAccountAccessCost = messageFrame.isAddressInAccessedAddresses(authorizedAddress) ? 0 : 2600; // From EIP-2929, only if address not accessed
+    int valueTransferCost = messageFrame.getValue().isZero() ? 0 : 9000; // Additional cost if value > 0, from EIP-7
+    int emptyAddressCost = messageFrame.getWorldState().get(authorizedAddress).isEmpty() ? 25000 : 0; // Additional cost if address is empty, from EIP-2
     // Calculate the total expected gas cost
-    Gas expectedGasCost = Gas.of(gasCalculator.getWarmStorageReadCost().toInt() + dynamicGasCost + valueTransferCost + emptyAddressCost);
+    Gas expectedGasCost = Gas.of(gasCalculator.getWarmStorageReadCost().toInt() + coldAccountAccessCost + valueTransferCost + emptyAddressCost);
     assertThat(result.getGasCost()).contains(expectedGasCost);
   }
 
@@ -124,14 +115,11 @@ public class AuthCallOperationTest {
 
     // Assert correct gas cost calculation as per EIP-3074
     // Dynamic gas cost components
-    int coldAccountAccessCost = 2600; // From EIP-2929
-    int valueTransferCost = 0; // Additional cost if value > 0
-    int emptyAddressCost = 0; // Additional cost if address is empty
-    // Assuming for test purposes that the address is not in the accessed addresses set and value is 0
-    int dynamicGasCost = coldAccountAccessCost - gasCalculator.getWarmStorageReadCost().toInt(); // cold_account_access_cost - warm_storage_read_cost
-    // Assuming for test purposes that the address is not empty
+    int coldAccountAccessCost = messageFrame.isAddressInAccessedAddresses(authorizedAddress) ? 0 : 2600; // From EIP-2929, only if address not accessed
+    int valueTransferCost = messageFrame.getValue().isZero() ? 0 : 9000; // Additional cost if value > 0, from EIP-7
+    int emptyAddressCost = messageFrame.getWorldState().get(authorizedAddress).isEmpty() ? 25000 : 0; // Additional cost if address is empty, from EIP-2
     // Calculate the total expected gas cost
-    Gas expectedGasCost = Gas.of(gasCalculator.getWarmStorageReadCost().toInt() + dynamicGasCost + valueTransferCost + emptyAddressCost);
+    Gas expectedGasCost = Gas.of(gasCalculator.getWarmStorageReadCost().toInt() + coldAccountAccessCost + valueTransferCost + emptyAddressCost);
     assertThat(cost).isEqualTo(expectedGasCost);
   }
 }

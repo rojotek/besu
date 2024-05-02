@@ -28,6 +28,7 @@ jar {
 }
 
 dependencies {
+  api project(':metrics-common') // Added dependency for shared metrics interfaces and classes
   api project(':datatypes')
   api 'org.apache.commons:commons-lang3'
   api 'io.tmio:tuweni-bytes'

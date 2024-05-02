@@ -1,18 +1,3 @@
-/*
- * Copyright ConsenSys AG.
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
 apply plugin: 'java-library'
 
 jar {
@@ -33,9 +18,9 @@ publishing {
   }
 }
 
-
 dependencies {
-  implementation project(':plugin-api')
+  implementation project(':metrics-common') // Added dependency for shared metrics interfaces and classes
+  implementation project(':plugin-api') // Re-added dependency for plugin services
   api 'org.slf4j:slf4j-api'
 
   implementation 'com.google.guava:guava'
@@ -61,6 +46,9 @@ dependencies {
   implementation 'io.vertx:vertx-core'
   implementation 'io.vertx:vertx-web'
 
+  // Add the org.jetbrains.annotations library as a dependency
+  implementation 'org.jetbrains:annotations:20.1.0'
+
   // test dependencies.
   testImplementation project(':util')
 
@@ -74,6 +62,5 @@ dependencies {
 
   annotationProcessor 'com.google.dagger:dagger-compiler'
 }
-
 
 artifacts { testSupportArtifacts testSupportJar }

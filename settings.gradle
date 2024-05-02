@@ -68,6 +68,7 @@ include 'ethereum:verkletrie'
 include 'evm'
 include 'metrics:core'
 include 'metrics:rocksdb'
+include 'metrics-common' // Added metrics-common module definition
 include 'nat'
 include 'pki'
 include 'plugin-api'

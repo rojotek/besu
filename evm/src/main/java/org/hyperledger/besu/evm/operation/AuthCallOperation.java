@@ -1,99 +1,108 @@
 package org.hyperledger.besu.evm.operation;
 
-import org.hyperledger.besu.evm.Gas;
+import org.hyperledger.besu.datatypes.Address;
+import org.hyperledger.besu.datatypes.Wei;
+import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
 import org.hyperledger.besu.evm.frame.MessageFrame;
+import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.evm.precompile.PrecompileContractRegistry;
-import org.hyperledger.besu.plugin.services.MetricsSystem;
-import org.hyperledger.besu.plugin.services.metrics.OperationTimer;
+import org.hyperledger.besu.evm.tracing.OperationTracer;
+import org.hyperledger.besu.evm.EVM;
+import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.units.bigints.UInt256;
 
 import java.util.Optional;
 
 public class AuthCallOperation extends AbstractOperation {
 
   private final PrecompileContractRegistry precompileContractRegistry;
-  private final MetricsSystem metricsSystem;
 
-  public AuthCallOperation(final GasCalculator gasCalculator, final PrecompileContractRegistry precompileContractRegistry, final MetricsSystem metricsSystem) {
-    super(0xf7, "AUTHCALL", 7, 1, false, 1, gasCalculator);
+  public AuthCallOperation(final GasCalculator gasCalculator, final PrecompileContractRegistry precompileContractRegistry) {
+    super(0xf7, "AUTHCALL", 7, 1, gasCalculator);
     this.precompileContractRegistry = precompileContractRegistry;
-    this.metricsSystem = metricsSystem;
   }
 
   @Override
   public OperationResult execute(final MessageFrame frame, final EVM evm) {
-    final OperationTimer timer = metricsSystem.createTimer("EVM", "AUTHCALL");
-    try (final OperationTimer.TimingContext ignored = timer.start()) {
-      // Extract the gas, address, value, argsOffset, argsLength, retOffset, retLength from the stack
-      final long gas = frame.popStackItem().asUInt256().toLong();
-      final Address address = Words.toAddress(frame.popStackItem());
-      final Wei value = Wei.wrap(frame.popStackItem());
-      final long argsOffset = frame.popStackItem().asUInt256().toLong();
-      final long argsLength = frame.popStackItem().asUInt256().toLong();
-      final long retOffset = frame.popStackItem().asUInt256().toLong();
-      final long retLength = frame.popStackItem().asUInt256().toLong();
+    try {
+      final UInt256 gas = UInt256.fromBytes(frame.popStackItem());
+      final Address address = Address.wrap(frame.popStackItem());
+      final Wei value = Wei.wrap(UInt256.fromBytes(frame.popStackItem()));
+      final UInt256 argsOffset = UInt256.fromBytes(frame.popStackItem());
+      final UInt256 argsLength = UInt256.fromBytes(frame.popStackItem());
+      final UInt256 retOffset = UInt256.fromBytes(frame.popStackItem());
+      final UInt256 retLength = UInt256.fromBytes(frame.popStackItem());
 
-      // Verify that the address is the authorized address set by the AUTH operation
-      if (!address.equals(frame.getAuthorizedAddress())) {
-        return new OperationResult(Optional.of(gasCalculator().getBaseTierGasCost()), Optional.of(ExceptionalHaltReason.ILLEGAL_STATE_CHANGE));
+      Address authorizedAddress = frame.getContextVariable("AUTHORIZED_ADDRESS", Address.ZERO);
+      if (!address.equals(authorizedAddress)) {
+        return new OperationResult(Optional.of(ExceptionalHaltReason.ILLEGAL_STATE_CHANGE), gasCalculator().getBaseTierGasCost());
       }
 
       // Perform the call operation
-      MessageFrame childFrame = MessageFrame.builder()
-        .type(MessageFrame.Type.MESSAGE_CALL)
-        .messageFrameStack(frame.getMessageFrameStack())
-        .blockchain(frame.getBlockchain())
-        .worldState(frame.getWorldState())
-        .initialGas(Gas.of(gas))
-        .address(address)
-        .originator(frame.getOriginatorAddress())
-        .contract(frame.getContractAddress())
-        .gasPrice(frame.getGasPrice())
-        .inputData(frame.readMemory(argsOffset, argsLength))
-        .sender(frame.getRecipientAddress())
-        .value(value)
-        .apparentValue(value)
-        .code(frame.getWorldState().getCode(address))
-        .blockHeader(frame.getBlockHeader())
-        .depth(frame.getDepth() + 1)
-        .completer(child -> {})
-        .miningBeneficiary(frame.getMiningBeneficiary())
-        .blockHashLookup(frame.getBlockHashLookup())
-        .maxStackSize(frame.getMaxStackSize())
-        .build();
+      // The actual child frame creation and execution logic will be here
+      // Assuming childFrame is a MessageFrame object that represents the result of the call operation
+      MessageFrame childFrame = new MessageFrame(
+        frame.getMessageFrameStack().peek().orElseThrow(),
+        frame.getWorldUpdater(),
+        frame.getOutputData(),
+        frame.getGasPrice(),
+        frame.getOriginatorAddress(),
+        frame.getContractAddress(),
+        frame.getContractAddress(),
+        frame.getInputData(),
+        gas,
+        frame.getDepth(),
+        frame.isStatic(),
+        frame.getReason()
+      );
 
-      evm.process(childFrame, OperationTracer.NO_TRACING);
+      // Execute the child frame
+      evm.runToHalt(childFrame);
 
-      // Handle the result of the call operation
       if (childFrame.getState() == MessageFrame.State.COMPLETED_SUCCESS) {
-        frame.writeMemory(retOffset, childFrame.getOutputData());
-        return new OperationResult(Optional.empty(), Optional.empty());
+        frame.writeMemory(retOffset.toLong(), retLength.toInt(), childFrame.getOutputData());
+        return new OperationResult(Optional.empty(), gas.toLong());
       } else {
-        return new OperationResult(Optional.of(gasCalculator().getBaseTierGasCost()), Optional.of(ExceptionalHaltReason.ILLEGAL_STATE_CHANGE));
+        return new OperationResult(Optional.of(ExceptionalHaltReason.ILLEGAL_STATE_CHANGE), gasCalculator().getBaseTierGasCost());
       }
     } catch (Exception e) {
-      // If there is an exception during the AUTHCALL operation, we halt exceptionally
-      return new OperationResult(Optional.of(gasCalculator().getBaseTierGasCost()), Optional.of(ExceptionalHaltReason.ILLEGAL_STATE_CHANGE));
+      return new OperationResult(Optional.of(ExceptionalHaltReason.ILLEGAL_STATE_CHANGE), gasCalculator().getBaseTierGasCost());
     }
   }
 
   @Override
-  public Gas cost(final MessageFrame frame) {
-    // Calculate the appropriate gas cost for the AUTHCALL operation
-    // The gas cost is defined in EIP-3074 and includes a base cost plus additional costs depending on certain conditions
-
-    // Base cost for AUTHCALL
-    final Gas baseCost = Gas.of(3000);
-
+  public long cost(final MessageFrame frame) {
+    final long baseCost = 3000;
     // TODO: Calculate additional costs based on conditions specified in EIP-3074
-    // For example, if the address is not in the accessed address set, add the cold account access cost
-    // If the value is greater than zero and the destination address is not in the accessed address set, add the cold account access cost
-    // If the destination address is a new account, add the new account creation cost
-    // If there is a value transfer, add the value transfer cost
-
-    // Placeholder for additional costs
-    final Gas additionalCosts = Gas.ZERO;
-
+    final long additionalCosts = calculateAdditionalCosts(frame);
     // The actual gas cost calculation will be implemented according to EIP-3074 specifications
-    return baseCost.plus(additionalCosts);
+    return baseCost + additionalCosts;
+  }
+
+  private long calculateAdditionalCosts(final MessageFrame frame) {
+    // Placeholder for additional gas cost calculation logic
+    // This should include calculations for things like cold account access and new account creation
+    // Refer to EIP-3074 for the specific conditions and costs
+    long additionalCosts = 0;
+    // Example calculation (this is just a placeholder and should be replaced with actual logic):
+    // if (isColdAccountAccess(frame)) {
+    //   additionalCosts += gasCalculator().getColdAccountAccessCost();
+    // }
+    // if (isNewAccountCreation(frame)) {
+    //   additionalCosts += gasCalculator().getNewAccountCreationCost();
+    // }
+    return additionalCosts;
+  }
+
+  // Placeholder methods for additional gas cost conditions
+  // These should be implemented according to the logic required by EIP-3074
+  private boolean isColdAccountAccess(final MessageFrame frame) {
+    // Placeholder logic for determining cold account access
+    return false;
+  }
+
+  private boolean isNewAccountCreation(final MessageFrame frame) {
+    // Placeholder logic for determining new account creation
+    return false;
   }
 }
