@@ -1,10 +1,11 @@
 package org.hyperledger.besu.evm.operation;
 
 import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.datatypes.Bytes;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
+import org.hyperledger.besu.evm.core.Gas;
 import org.hyperledger.besu.evm.precompile.PrecompileContract;
 import org.hyperledger.besu.evm.precompile.PrecompileContractRegistry;
 import org.hyperledger.besu.plugin.services.metrics.MetricsSystem;
