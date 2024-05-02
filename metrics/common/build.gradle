@@ -1,0 +1,19 @@
+plugins {
+    id 'java-library'
+}
+
+sourceCompatibility = JavaVersion.VERSION_11
+targetCompatibility = JavaVersion.VERSION_11
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Define any dependencies that are required for the shared interfaces and classes
+}
+
+// Ensure that the jar task includes the Java files from the correct source directory
+jar {
+    from sourceSets.main.java.srcDirs
+}
