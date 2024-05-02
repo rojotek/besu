@@ -78,3 +78,4 @@ include 'services:pipeline'
 include 'services:tasks'
 include 'testutil'
 include 'util'
+include 'plugin-services' // Added plugin-services module definition

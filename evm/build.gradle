@@ -36,6 +36,7 @@ dependencies {
   implementation project(':crypto:algorithms')
   implementation project(':datatypes')
   implementation project(':ethereum:rlp')
+  implementation project(':plugin-services') // Added dependency for MetricsSystem
 
   implementation 'com.github.ben-manes.caffeine:caffeine'
   implementation 'com.google.guava:guava'

@@ -78,11 +78,22 @@ public class AuthCallOperation extends AbstractOperation {
 
   @Override
   public Gas cost(final MessageFrame frame) {
-    // TODO: Calculate the appropriate gas cost for the AUTHCALL operation
-    // The gas cost is defined in EIP-3074, for now, we'll return a fixed cost for illustration purposes
+    // Calculate the appropriate gas cost for the AUTHCALL operation
+    // The gas cost is defined in EIP-3074 and includes a base cost plus additional costs depending on certain conditions
 
-    // Placeholder for the AUTHCALL operation gas cost
+    // Base cost for AUTHCALL
+    final Gas baseCost = Gas.of(3000);
+
+    // TODO: Calculate additional costs based on conditions specified in EIP-3074
+    // For example, if the address is not in the accessed address set, add the cold account access cost
+    // If the value is greater than zero and the destination address is not in the accessed address set, add the cold account access cost
+    // If the destination address is a new account, add the new account creation cost
+    // If there is a value transfer, add the value transfer cost
+
+    // Placeholder for additional costs
+    final Gas additionalCosts = Gas.ZERO;
+
     // The actual gas cost calculation will be implemented according to EIP-3074 specifications
-    return Gas.of(3400); // Placeholder for the actual gas cost defined in EIP-3074
+    return baseCost.plus(additionalCosts);
   }
 }

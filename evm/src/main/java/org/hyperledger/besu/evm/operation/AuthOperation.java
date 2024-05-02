@@ -1,16 +1,18 @@
 package org.hyperledger.besu.evm.operation;
 
-import org.hyperledger.besu.evm.GasCalculator;
+import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.evm.precompile.PrecompileContractRegistry;
-import org.hyperledger.besu.evm.precompile.PrecompiledContracts;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.metrics.OperationTimer;
 import org.hyperledger.besu.datatypes.Bytes;
 import org.hyperledger.besu.evm.operation.AbstractOperation;
 import org.hyperledger.besu.evm.operation.OperationResult;
+import org.hyperledger.besu.evm.precompile.PrecompileContract;
+import org.hyperledger.besu.evm.EVM;
+import org.hyperledger.besu.evm.Gas;
 
 import java.util.Optional;
 
@@ -38,8 +40,9 @@ public class AuthOperation extends AbstractOperation {
       Bytes signature = input.slice(input.size() - 65, 65);
 
       // Perform ECDSA signature verification using a precompile
-      PrecompiledContracts.PrecompileContract authPrecompile = precompileContractRegistry.get(PrecompiledContracts.ECDSA_RECOVER);
-      if (authPrecompile != null) {
+      Optional<PrecompileContract> authPrecompileOptional = precompileContractRegistry.get(PrecompiledContractIdentifier.ECDSA_RECOVER);
+      if (authPrecompileOptional.isPresent()) {
+        PrecompileContract authPrecompile = authPrecompileOptional.get();
         // Assuming the message hash is the input data without the last 65 bytes of the signature
         Bytes messageHash = input.slice(0, input.size() - 65);
         Bytes output = authPrecompile.compute(messageHash, signature, evm);
