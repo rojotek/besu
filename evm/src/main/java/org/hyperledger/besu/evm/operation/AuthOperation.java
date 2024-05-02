@@ -31,7 +31,6 @@ public class AuthOperation extends AbstractOperation {
     // Extract the signature from the input data
     // Assuming the signature is the last 65 bytes of the input data
     Bytes input = frame.getInputData();
-    Bytes signature = input.slice(input.size() - 65, 65);
 
     // Perform ECDSA signature verification using a precompile
     PrecompiledContract authPrecompile = precompileContractRegistry.get(Address.fromHexString("0x01"));
@@ -40,9 +39,8 @@ public class AuthOperation extends AbstractOperation {
       Bytes messageHash = input.slice(0, input.size() - 65);
       PrecompileContractResult precompileResult = authPrecompile.computePrecompile(messageHash, frame);
       if (precompileResult.getState() == MessageFrame.State.COMPLETED_SUCCESS) {
-        Address authorizedAddress = Address.wrap(precompileResult.getOutput());
-        // TODO: Set the authorized address in the appropriate context according to EIP-3074
-        // frame.setAuthorizedAddress(authorizedAddress); // This method does not exist, need to find an alternative
+        // Set the authorized address in the appropriate context according to EIP-3074
+        // TODO: Implement setting the authorized address in the message frame context
         return new OperationResult(gasCalculator().getBaseTierGasCost(), null);
       } else {
         // Signature verification failed
