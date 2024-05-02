@@ -9,8 +9,8 @@ import org.hyperledger.besu.evm.precompile.PrecompileContract;
 import org.hyperledger.besu.evm.precompile.PrecompileContractRegistry;
 import org.hyperledger.besu.plugin.services.metrics.MetricsSystem;
 import org.hyperledger.besu.plugin.services.metrics.OperationTimer;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 
 import java.util.Optional;
@@ -32,7 +32,7 @@ public class AuthCallOperationTest {
 
   private AuthCallOperation authCallOperation;
 
-  @Before
+  @BeforeEach
   public void setup() {
     messageFrame = mock(MessageFrame.class);
     evm = mock(EVM.class);

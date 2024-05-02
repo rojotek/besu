@@ -15,8 +15,8 @@ import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.datatypes.Bytes;
 import org.hyperledger.besu.datatypes.Bytes32;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 
 import java.util.Optional;
@@ -33,7 +33,7 @@ public class AuthOperationTest {
 
   private AuthOperation authOperation;
 
-  @Before
+  @BeforeEach
   public void setup() {
     messageFrame = mock(MessageFrame.class);
     evm = mock(EVM.class);
