@@ -1,11 +1,9 @@
 package org.hyperledger.besu.evm.operation;
 
 import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
-import org.hyperledger.besu.evm.precompile.PrecompileContractRegistry;
 import org.hyperledger.besu.evm.EVM;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt256;
@@ -14,11 +12,8 @@ import java.util.Optional;
 
 public class AuthCallOperation extends AbstractOperation {
 
-  private final PrecompileContractRegistry precompileContractRegistry;
-
-  public AuthCallOperation(final GasCalculator gasCalculator, final PrecompileContractRegistry precompileContractRegistry) {
+  public AuthCallOperation(final GasCalculator gasCalculator) {
     super(0xf7, "AUTHCALL", 7, 1, gasCalculator);
-    this.precompileContractRegistry = precompileContractRegistry;
   }
 
   @Override
@@ -26,9 +21,6 @@ public class AuthCallOperation extends AbstractOperation {
     try {
       final UInt256 gas = UInt256.fromBytes(frame.popStackItem());
       final Address address = Address.wrap(frame.popStackItem());
-      final Wei value = Wei.wrap(UInt256.fromBytes(frame.popStackItem()));
-      final UInt256 argsOffset = UInt256.fromBytes(frame.popStackItem());
-      final UInt256 argsLength = UInt256.fromBytes(frame.popStackItem());
       final UInt256 retOffset = UInt256.fromBytes(frame.popStackItem());
       final UInt256 retLength = UInt256.fromBytes(frame.popStackItem());
 
@@ -61,6 +53,4 @@ public class AuthCallOperation extends AbstractOperation {
       return new OperationResult(gasCalculator().getBaseTierGasCost(), ExceptionalHaltReason.ILLEGAL_STATE_CHANGE);
     }
   }
-
-  // Removed the @Override annotation and the cost method as it is not part of the Operation interface
 }
