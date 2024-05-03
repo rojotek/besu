@@ -56,7 +56,7 @@ public class AuthCallOperationTest {
     OperationResult result = authCallOperation.execute(messageFrame, evm);
 
     // Assert successful execution
-    assertThat(result.getHaltReason()).isNotPresent();
+    assertThat(result.getHaltReason()).isEmpty();
   }
 
   @Test
@@ -72,7 +72,8 @@ public class AuthCallOperationTest {
     OperationResult result = authCallOperation.execute(messageFrame, evm);
 
     // Assert failure due to invalid input
-    assertThat(result.getHaltReason()).containsInstanceOf(ExceptionalHaltReason.class);
+    assertThat(result.getHaltReason()).isNotEmpty();
+    assertThat(result.getHaltReason().get()).isEqualTo(ExceptionalHaltReason.INVALID_OPERATION);
   }
 
   // The test for shouldCorrectlyCalculateGasCostForAuthCall has been removed as the cost method does not exist in AuthCallOperation class
