@@ -8,9 +8,7 @@ import static org.mockito.ArgumentMatchers.any;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.EVM;
-import org.hyperledger.besu.evm.precompile.PrecompileContract;
-import org.hyperledger.besu.evm.precompile.PrecompileContractRegistry;
-import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
+import org.hyperledger.besu.evm.precompile.PrecompiledContract;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Wei;
 import org.apache.tuweni.bytes.Bytes;
@@ -25,8 +23,7 @@ public class AuthOperationTest {
 
   @Mock private MessageFrame messageFrame;
   @Mock private EVM evm;
-  @Mock private PrecompileContract authPrecompile;
-  @Mock private PrecompileContractRegistry precompileContractRegistry;
+  @Mock private PrecompiledContract authPrecompile;
   @Mock private GasCalculator gasCalculator;
 
   private AuthOperation authOperation;
@@ -35,16 +32,14 @@ public class AuthOperationTest {
   public void setup() {
     messageFrame = mock(MessageFrame.class);
     evm = mock(EVM.class);
-    authPrecompile = mock(PrecompileContract.class);
-    precompileContractRegistry = mock(PrecompileContractRegistry.class);
+    authPrecompile = mock(PrecompiledContract.class);
     gasCalculator = mock(GasCalculator.class);
-
-    NoOpMetricsSystem metricsSystem = new NoOpMetricsSystem();
 
     when(precompileContractRegistry.get(any())).thenReturn(Optional.of(authPrecompile));
     when(gasCalculator.getBaseTierGasCost()).thenReturn(21000L);
 
-    authOperation = new AuthOperation(gasCalculator, precompileContractRegistry, metricsSystem);
+    // Correcting the constructor call to match the actual constructor of AuthOperation
+    authOperation = new AuthOperation(gasCalculator, precompileContractRegistry);
   }
 
   @Test

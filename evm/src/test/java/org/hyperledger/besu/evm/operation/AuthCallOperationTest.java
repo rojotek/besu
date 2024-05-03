@@ -5,9 +5,7 @@ import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
-import org.hyperledger.besu.evm.precompile.PrecompileContract;
-import org.hyperledger.besu.evm.precompile.PrecompileContractRegistry;
-import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem; // Corrected import
+import org.hyperledger.besu.evm.precompile.PrecompiledContract;
 import org.hyperledger.besu.plugin.services.metrics.MetricsSystem;
 import org.hyperledger.besu.plugin.services.metrics.OperationTimer;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,8 +23,7 @@ public class AuthCallOperationTest {
 
   @Mock private MessageFrame messageFrame;
   @Mock private EVM evm;
-  @Mock private PrecompileContract authCallPrecompile;
-  @Mock private PrecompileContractRegistry precompileContractRegistry;
+  @Mock private PrecompiledContract authCallPrecompile;
   @Mock private GasCalculator gasCalculator;
   @Mock private MetricsSystem metricsSystem;
   @Mock private OperationTimer operationTimer;
@@ -37,18 +34,16 @@ public class AuthCallOperationTest {
   public void setup() {
     messageFrame = mock(MessageFrame.class);
     evm = mock(EVM.class);
-    authCallPrecompile = mock(PrecompileContract.class);
-    precompileContractRegistry = mock(PrecompileContractRegistry.class);
+    authCallPrecompile = mock(PrecompiledContract.class);
     gasCalculator = mock(GasCalculator.class);
     metricsSystem = mock(MetricsSystem.class);
     operationTimer = mock(OperationTimer.class);
 
     when(metricsSystem.createTimer("EVM", "AUTHCALL")).thenReturn(operationTimer);
-    when(precompileContractRegistry.get(any())).thenReturn(Optional.of(authCallPrecompile));
     when(gasCalculator.getBaseTierGasCost()).thenReturn(21000L);
     when(gasCalculator.getWarmStorageReadCost()).thenReturn(100L); // Static gas cost for warm_storage_read
 
-    authCallOperation = new AuthCallOperation(gasCalculator, precompileContractRegistry, metricsSystem);
+    authCallOperation = new AuthCallOperation(gasCalculator, metricsSystem);
   }
 
   @Test
