@@ -28,6 +28,7 @@ public class AuthOperationTest {
   @Mock private EVM evm;
   @Mock private PrecompiledContract authPrecompile;
   @Mock private GasCalculator gasCalculator;
+  @Mock private PrecompileContractRegistry precompileContractRegistry;
 
   private AuthOperation authOperation;
 
@@ -37,10 +38,11 @@ public class AuthOperationTest {
     evm = mock(EVM.class);
     authPrecompile = mock(PrecompiledContract.class);
     gasCalculator = mock(GasCalculator.class);
+    precompileContractRegistry = mock(PrecompileContractRegistry.class);
 
     when(gasCalculator.getBaseTierGasCost()).thenReturn(21000L);
 
-    authOperation = new AuthOperation(gasCalculator);
+    authOperation = new AuthOperation(gasCalculator, precompileContractRegistry);
   }
 
   @Test
@@ -53,7 +55,7 @@ public class AuthOperationTest {
     Address authorizedAddress = Address.fromHexString("0xauthorized");
 
     when(messageFrame.getInputData()).thenReturn(Bytes.concatenate(message, signature));
-    when(authPrecompile.computePrecompile(any(), eq(messageFrame))).thenReturn(new PrecompileContractResult(MessageFrame.State.COMPLETED_SUCCESS, authorizedAddress));
+    when(authPrecompile.computePrecompile(any(), eq(messageFrame))).thenReturn(new OperationResult(Optional.empty(), 3000L));
 
     // Execute the AUTH operation
     OperationResult result = authOperation.execute(messageFrame, evm);
@@ -61,9 +63,9 @@ public class AuthOperationTest {
     // Assert successful authorization
     // Check that the authorized address is set correctly in the message frame
     assertThat(messageFrame.getStackItem(0)).isEqualTo(authorizedAddress); // Assuming the authorized address is pushed to the stack
-    assertThat(result.getHaltReason()).isEmpty();
+    assertThat(result.getHaltReason()).isNotPresent();
     // Assert correct gas cost for successful authorization as per EIP-3074
-    assertThat(result.getGasCost()).contains(3000L);
+    assertThat(result.getGasCost()).isEqualTo(3000L);
   }
 
   @Test
@@ -74,7 +76,7 @@ public class AuthOperationTest {
     Bytes message = Bytes.of(1, 2, 3); // Example message
 
     when(messageFrame.getInputData()).thenReturn(Bytes.concatenate(message, signature));
-    when(authPrecompile.computePrecompile(any(), eq(messageFrame))).thenReturn(new PrecompileContractResult(MessageFrame.State.REVERT, Bytes.EMPTY));
+    when(authPrecompile.computePrecompile(any(), eq(messageFrame))).thenReturn(new OperationResult(Optional.of(ExceptionalHaltReason.ILLEGAL_STATE_CHANGE), gasCalculator.getBaseTierGasCost()));
 
     // Execute the AUTH operation
     OperationResult result = authOperation.execute(messageFrame, evm);
@@ -82,8 +84,8 @@ public class AuthOperationTest {
     // Assert failure due to invalid signature
     // Check that the message frame does not set an authorized address
     assertThat(messageFrame.getStackItem(0)).isNull(); // Assuming the stack is cleared or the address is not pushed when authorization fails
-    assertThat(result.getHaltReason()).contains(ExceptionalHaltReason.ILLEGAL_STATE_CHANGE);
-    assertThat(result.getGasCost()).contains(gasCalculator.getBaseTierGasCost());
+    assertThat(result.getHaltReason()).isPresent().contains(ExceptionalHaltReason.ILLEGAL_STATE_CHANGE);
+    assertThat(result.getGasCost()).isEqualTo(gasCalculator.getBaseTierGasCost());
   }
 
   @Test
