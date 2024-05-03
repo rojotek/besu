@@ -44,7 +44,7 @@ public class AuthOperation extends AbstractOperation {
         return new OperationResult(gasCalculator().getBaseTierGasCost(), null);
       } else {
         // Signature verification failed
-        return new OperationResult(gasCalculator().getBaseTierGasCost(), null);
+        return new OperationResult(gasCalculator().getBaseTierGasCost(), ExceptionalHaltReason.INVALID_OPERATION);
       }
     } else {
       // Precompile not defined

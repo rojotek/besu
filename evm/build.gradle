@@ -59,7 +59,7 @@ dependencies {
 
   testImplementation 'com.fasterxml.jackson.core:jackson-databind'
   testImplementation 'info.picocli:picocli'
-  testImplementation 'org.assertj:assertj-core'
+  testImplementation 'org.assertj:assertj-core:3.19.0' // Specify version to include isNotPresent() method
   testImplementation 'org.junit.jupiter:junit-jupiter'
   testImplementation 'org.mockito:mockito-core'
   testImplementation 'org.mockito:mockito-junit-jupiter'

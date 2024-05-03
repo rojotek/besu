@@ -14,6 +14,8 @@ import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
 import org.hyperledger.besu.evm.operation.Operation.OperationResult;
+import org.hyperledger.besu.evm.precompile.PrecompileContractRegistry;
+import org.hyperledger.besu.evm.precompile.PrecompiledContract.PrecompileContractResult;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +30,7 @@ public class AuthOperationTest {
   @Mock private EVM evm;
   @Mock private PrecompiledContract authPrecompile;
   @Mock private GasCalculator gasCalculator;
+  @Mock private PrecompileContractRegistry precompileContractRegistry;
 
   private AuthOperation authOperation;
 
@@ -37,10 +40,11 @@ public class AuthOperationTest {
     evm = mock(EVM.class);
     authPrecompile = mock(PrecompiledContract.class);
     gasCalculator = mock(GasCalculator.class);
+    precompileContractRegistry = mock(PrecompileContractRegistry.class);
 
     when(gasCalculator.getBaseTierGasCost()).thenReturn(21000L);
 
-    authOperation = new AuthOperation(gasCalculator);
+    authOperation = new AuthOperation(gasCalculator, precompileContractRegistry);
   }
 
   @Test
@@ -53,7 +57,7 @@ public class AuthOperationTest {
     Address authorizedAddress = Address.fromHexString("0xauthorized");
 
     when(messageFrame.getInputData()).thenReturn(Bytes.concatenate(message, signature));
-    when(authPrecompile.computePrecompile(any(), eq(messageFrame))).thenReturn(new OperationResult(Optional.empty(), 3000L));
+    when(authPrecompile.computePrecompile(any(), eq(messageFrame))).thenReturn(PrecompileContractResult.success(Bytes.EMPTY));
 
     // Execute the AUTH operation
     OperationResult result = authOperation.execute(messageFrame, evm);
@@ -74,28 +78,28 @@ public class AuthOperationTest {
     Bytes message = Bytes.of(1, 2, 3); // Example message
 
     when(messageFrame.getInputData()).thenReturn(Bytes.concatenate(message, signature));
-    when(authPrecompile.computePrecompile(any(), eq(messageFrame))).thenReturn(new OperationResult(Optional.of(ExceptionalHaltReason.ILLEGAL_STATE_CHANGE), gasCalculator.getBaseTierGasCost()));
+    when(authPrecompile.computePrecompile(any(), eq(messageFrame))).thenReturn(PrecompileContractResult.halt(Bytes.EMPTY, Optional.of(ExceptionalHaltReason.INVALID_OPERATION)));
 
     // Execute the AUTH operation
     OperationResult result = authOperation.execute(messageFrame, evm);
 
     // Assert failure due to invalid signature
     // Check that the message frame does not set an authorized address
-    assertThat(messageFrame.getStackItem(0)).isNull(); // Assuming the stack is cleared or the address is not pushed when authorization fails
-    assertThat(result.getHaltReason()).isPresent().contains(ExceptionalHaltReason.ILLEGAL_STATE_CHANGE);
-    assertThat(result.getGasCost()).isEqualTo(gasCalculator.getBaseTierGasCost());
+    assertThat(messageFrame.getStackItem(0)).isNull();
+    assertThat(result.getHaltReason()).isEqualTo(ExceptionalHaltReason.INVALID_OPERATION);
+    assertThat(result.getGasCost()).isEqualTo(21000L);
   }
 
   @Test
   public void shouldExceptionallyHaltOnPrecompileNotDefined() {
     // Setup scenario where precompile is not defined
-    when(authPrecompile.computePrecompile(any(), eq(messageFrame))).thenReturn(Optional.empty());
+    when(authPrecompile.computePrecompile(any(), eq(messageFrame))).thenReturn(PrecompileContractResult.halt(Bytes.EMPTY, Optional.of(ExceptionalHaltReason.PRECOMPILE_ERROR)));
 
     // Execute the AUTH operation
     OperationResult result = authOperation.execute(messageFrame, evm);
 
     // Assert exceptional halt
-    assertThat(result.getHaltReason()).contains(ExceptionalHaltReason.PRECOMPILE_ERROR);
+    assertThat(result.getHaltReason()).isEqualTo(ExceptionalHaltReason.PRECOMPILE_ERROR);
   }
 
   @Test
