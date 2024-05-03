@@ -52,13 +52,13 @@ public class AuthCallOperationTest {
 
     when(messageFrame.getInputData()).thenReturn(inputData);
     // Mock the necessary frame and precompile behaviors
-    when(authCallPrecompile.compute(any(), any())).thenReturn(PrecompiledContract.PrecompileContractResult.success());
+    when(authCallPrecompile.compute(any(), any())).thenReturn(PrecompiledContract.PrecompileContractResult.success(Bytes.EMPTY));
 
     // Execute the AUTHCALL operation
     OperationResult result = authCallOperation.execute(messageFrame, evm);
 
     // Assert successful execution
-    assertThat(result.getHaltReason()).isEmpty();
+    assertThat(result.getHaltReason()).isNotPresent();
   }
 
   @Test
@@ -68,13 +68,13 @@ public class AuthCallOperationTest {
 
     when(messageFrame.getInputData()).thenReturn(inputData);
     // Mock the necessary frame and precompile behaviors to simulate an invalid input
-    when(authCallPrecompile.compute(any(), any())).thenReturn(PrecompiledContract.PrecompileContractResult.halt(Optional.of(ExceptionalHaltReason.INVALID_OPERATION)));
+    when(authCallPrecompile.compute(any(), any())).thenReturn(PrecompiledContract.PrecompileContractResult.halt(Bytes.EMPTY, Optional.of(ExceptionalHaltReason.INVALID_OPERATION)));
 
     // Execute the AUTHCALL operation
     OperationResult result = authCallOperation.execute(messageFrame, evm);
 
     // Assert failure due to invalid input
-    assertThat(result.getHaltReason()).isEqualTo(Optional.of(ExceptionalHaltReason.INVALID_OPERATION));
+    assertThat(result.getHaltReason()).isPresent().contains(ExceptionalHaltReason.INVALID_OPERATION);
   }
 
   // The test for shouldCorrectlyCalculateGasCostForAuthCall has been removed as the cost method does not exist in AuthCallOperation class

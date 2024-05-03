@@ -86,7 +86,7 @@ public class AuthOperationTest {
     // Assert failure due to invalid signature
     // Check that the message frame does not set an authorized address
     assertThat(messageFrame.getStackItem(0)).isNull();
-    assertThat(result.getHaltReason()).isEqualTo(ExceptionalHaltReason.INVALID_OPERATION);
+    assertThat(result.getHaltReason()).isPresent().contains(ExceptionalHaltReason.INVALID_OPERATION);
     assertThat(result.getGasCost()).isEqualTo(21000L);
   }
 
@@ -99,7 +99,7 @@ public class AuthOperationTest {
     OperationResult result = authOperation.execute(messageFrame, evm);
 
     // Assert exceptional halt
-    assertThat(result.getHaltReason()).isEqualTo(ExceptionalHaltReason.PRECOMPILE_ERROR);
+    assertThat(result.getHaltReason()).isPresent().contains(ExceptionalHaltReason.PRECOMPILE_ERROR);
   }
 
   @Test
