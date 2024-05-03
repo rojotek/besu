@@ -28,7 +28,6 @@ public class AuthOperationTest {
   @Mock private EVM evm;
   @Mock private PrecompiledContract authPrecompile;
   @Mock private GasCalculator gasCalculator;
-  @Mock private PrecompileContractRegistry precompileContractRegistry;
 
   private AuthOperation authOperation;
 
@@ -38,11 +37,10 @@ public class AuthOperationTest {
     evm = mock(EVM.class);
     authPrecompile = mock(PrecompiledContract.class);
     gasCalculator = mock(GasCalculator.class);
-    precompileContractRegistry = mock(PrecompileContractRegistry.class);
 
     when(gasCalculator.getBaseTierGasCost()).thenReturn(21000L);
 
-    authOperation = new AuthOperation(gasCalculator, precompileContractRegistry);
+    authOperation = new AuthOperation(gasCalculator);
   }
 
   @Test
@@ -91,7 +89,7 @@ public class AuthOperationTest {
   @Test
   public void shouldExceptionallyHaltOnPrecompileNotDefined() {
     // Setup scenario where precompile is not defined
-    when(precompileContractRegistry.get(any())).thenReturn(Optional.empty());
+    when(authPrecompile.computePrecompile(any(), eq(messageFrame))).thenReturn(Optional.empty());
 
     // Execute the AUTH operation
     OperationResult result = authOperation.execute(messageFrame, evm);
