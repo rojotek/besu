@@ -10,6 +10,8 @@ import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
+import org.hyperledger.besu.evm.operation.OperationResult;
+import org.hyperledger.besu.evm.exception.ExceptionalHaltReason;
 
 import java.util.Optional;
 
@@ -34,7 +36,7 @@ public class AuthCallOperationTest {
     evm = mock(EVM.class);
     authCallPrecompile = mock(PrecompiledContract.class);
     gasCalculator = mock(GasCalculator.class);
-    metricsSystem = new NoOpMetricsSystem();
+    metricsSystem = mock(NoOpMetricsSystem.class);
 
     when(gasCalculator.getBaseTierGasCost()).thenReturn(21000L);
     when(gasCalculator.getWarmStorageReadCost()).thenReturn(100L); // Static gas cost for warm_storage_read
@@ -51,14 +53,14 @@ public class AuthCallOperationTest {
     Address authorizedAddress = Address.fromHexString("0xauthorized");
 
     when(messageFrame.getInputData()).thenReturn(inputData);
-    when(authCallPrecompile.compute(any(), any(), any())).thenReturn(authorizedAddress);
+    when(authCallPrecompile.compute(any(), any())).thenReturn(authorizedAddress);
 
     // Execute the AUTHCALL operation
     OperationResult result = authCallOperation.execute(messageFrame, evm);
 
     // Assert successful execution
     // Check that the authorized address is set correctly in the message frame
-    assertThat(messageFrame.getAuthorizedAddress()).isEqualTo(authorizedAddress);
+    assertThat(messageFrame.getStackItem(0)).isEqualTo(authorizedAddress);
     assertThat(result.getHaltReason()).isEmpty();
     // Dynamic gas cost components
     int coldAccountAccessCost = messageFrame.isAddressInAccessedAddresses(authorizedAddress) ? 0 : 2600; // From EIP-2929, only if address not accessed
@@ -76,14 +78,14 @@ public class AuthCallOperationTest {
     Bytes inputData = Bytes.of(1, 2, 3); // Example invalid input data
 
     when(messageFrame.getInputData()).thenReturn(inputData);
-    when(authCallPrecompile.compute(any(), any(), any())).thenReturn(Bytes.EMPTY);
+    when(authCallPrecompile.compute(any(), any())).thenReturn(Bytes.EMPTY);
 
     // Execute the AUTHCALL operation
     OperationResult result = authCallOperation.execute(messageFrame, evm);
 
     // Assert failure due to invalid input
     // Check that the message frame does not set an authorized address
-    assertThat(messageFrame.getAuthorizedAddress()).isNull();
+    assertThat(messageFrame.getStackItem(0)).isNull();
     assertThat(result.getHaltReason()).contains(ExceptionalHaltReason.ILLEGAL_STATE_CHANGE);
     // Dynamic gas cost components
     int coldAccountAccessCost = messageFrame.isAddressInAccessedAddresses(authorizedAddress) ? 0 : 2600; // From EIP-2929, only if address not accessed
@@ -99,6 +101,7 @@ public class AuthCallOperationTest {
     // Setup scenario for gas cost calculation
     // Mock the necessary frame behaviors
     Bytes inputData = Bytes.of(1, 2, 3); // Example input data
+    Address authorizedAddress = Address.fromHexString("0xauthorized");
 
     when(messageFrame.getInputData()).thenReturn(inputData);
 
