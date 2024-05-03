@@ -6,7 +6,7 @@ import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.evm.precompile.PrecompiledContract;
-import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
+import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -26,7 +26,7 @@ public class AuthCallOperationTest {
   @Mock private EVM evm;
   @Mock private PrecompiledContract authCallPrecompile;
   @Mock private GasCalculator gasCalculator;
-  private NoOpMetricsSystem metricsSystem;
+  private MetricsSystem metricsSystem;
 
   private AuthCallOperation authCallOperation;
 
@@ -36,12 +36,12 @@ public class AuthCallOperationTest {
     evm = mock(EVM.class);
     authCallPrecompile = mock(PrecompiledContract.class);
     gasCalculator = mock(GasCalculator.class);
-    metricsSystem = mock(NoOpMetricsSystem.class);
+    metricsSystem = mock(MetricsSystem.class);
 
     when(gasCalculator.getBaseTierGasCost()).thenReturn(21000L);
     when(gasCalculator.getWarmStorageReadCost()).thenReturn(100L); // Static gas cost for warm_storage_read
 
-    authCallOperation = new AuthCallOperation(gasCalculator);
+    authCallOperation = new AuthCallOperation(gasCalculator, metricsSystem);
   }
 
   @Test
@@ -52,13 +52,13 @@ public class AuthCallOperationTest {
 
     when(messageFrame.getInputData()).thenReturn(inputData);
     // Mock the necessary frame and precompile behaviors
-    when(authCallPrecompile.compute(any(), any())).thenReturn(PrecompiledContract.PrecompileContractResult.success(Bytes.EMPTY));
+    when(authCallPrecompile.computePrecompile(any(), any())).thenReturn(PrecompiledContract.PrecompileContractResult.success(Bytes.EMPTY));
 
     // Execute the AUTHCALL operation
     OperationResult result = authCallOperation.execute(messageFrame, evm);
 
     // Assert successful execution
-    assertThat(result.getHaltReason()).isNotPresent();
+    assertThat(result.getHaltReason()).isEmpty();
   }
 
   @Test
@@ -68,13 +68,13 @@ public class AuthCallOperationTest {
 
     when(messageFrame.getInputData()).thenReturn(inputData);
     // Mock the necessary frame and precompile behaviors to simulate an invalid input
-    when(authCallPrecompile.compute(any(), any())).thenReturn(PrecompiledContract.PrecompileContractResult.halt(Bytes.EMPTY, Optional.of(ExceptionalHaltReason.INVALID_OPERATION)));
+    when(authCallPrecompile.computePrecompile(any(), any())).thenReturn(PrecompiledContract.PrecompileContractResult.halt(Bytes.EMPTY, Optional.of(ExceptionalHaltReason.INVALID_OPERATION)));
 
     // Execute the AUTHCALL operation
     OperationResult result = authCallOperation.execute(messageFrame, evm);
 
     // Assert failure due to invalid input
-    assertThat(result.getHaltReason()).isPresent().contains(ExceptionalHaltReason.INVALID_OPERATION);
+    assertThat(result.getHaltReason()).contains(ExceptionalHaltReason.INVALID_OPERATION);
   }
 
   // The test for shouldCorrectlyCalculateGasCostForAuthCall has been removed as the cost method does not exist in AuthCallOperation class
