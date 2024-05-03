@@ -6,8 +6,7 @@ import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.evm.precompile.PrecompiledContract;
-import org.hyperledger.besu.plugin.services.metrics.MetricsSystem;
-import org.hyperledger.besu.plugin.services.metrics.OperationTimer;
+import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -25,8 +24,7 @@ public class AuthCallOperationTest {
   @Mock private EVM evm;
   @Mock private PrecompiledContract authCallPrecompile;
   @Mock private GasCalculator gasCalculator;
-  @Mock private MetricsSystem metricsSystem;
-  @Mock private OperationTimer operationTimer;
+  private NoOpMetricsSystem metricsSystem;
 
   private AuthCallOperation authCallOperation;
 
@@ -36,10 +34,8 @@ public class AuthCallOperationTest {
     evm = mock(EVM.class);
     authCallPrecompile = mock(PrecompiledContract.class);
     gasCalculator = mock(GasCalculator.class);
-    metricsSystem = mock(MetricsSystem.class);
-    operationTimer = mock(OperationTimer.class);
+    metricsSystem = new NoOpMetricsSystem();
 
-    when(metricsSystem.createTimer("EVM", "AUTHCALL")).thenReturn(operationTimer);
     when(gasCalculator.getBaseTierGasCost()).thenReturn(21000L);
     when(gasCalculator.getWarmStorageReadCost()).thenReturn(100L); // Static gas cost for warm_storage_read
 
