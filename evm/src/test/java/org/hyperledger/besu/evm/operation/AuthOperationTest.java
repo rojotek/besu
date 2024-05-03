@@ -63,9 +63,8 @@ public class AuthOperationTest {
     OperationResult result = authOperation.execute(messageFrame, evm);
 
     // Assert successful authorization
-    // Check that the authorized address is set correctly in the message frame
     assertThat(messageFrame.getStackItem(0)).isEqualTo(authorizedAddress); // Assuming the authorized address is pushed to the stack
-    assertThat(result.getHaltReason()).isNotPresent();
+    assertThat(result.getHaltReason()).isEmpty();
     // Assert correct gas cost for successful authorization as per EIP-3074
     assertThat(result.getGasCost()).isEqualTo(3000L);
   }
@@ -84,9 +83,9 @@ public class AuthOperationTest {
     OperationResult result = authOperation.execute(messageFrame, evm);
 
     // Assert failure due to invalid signature
-    // Check that the message frame does not set an authorized address
     assertThat(messageFrame.getStackItem(0)).isNull();
-    assertThat(result.getHaltReason()).containsInstanceOf(ExceptionalHaltReason.class);
+    assertThat(result.getHaltReason()).isNotEmpty();
+    assertThat(result.getHaltReason().get()).isEqualTo(ExceptionalHaltReason.INVALID_OPERATION);
     assertThat(result.getGasCost()).isEqualTo(21000L);
   }
 
@@ -99,7 +98,8 @@ public class AuthOperationTest {
     OperationResult result = authOperation.execute(messageFrame, evm);
 
     // Assert exceptional halt
-    assertThat(result.getHaltReason()).containsInstanceOf(ExceptionalHaltReason.class);
+    assertThat(result.getHaltReason()).isNotEmpty();
+    assertThat(result.getHaltReason().get()).isEqualTo(ExceptionalHaltReason.PRECOMPILE_ERROR);
   }
 
   @Test
