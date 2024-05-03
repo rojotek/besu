@@ -47,20 +47,18 @@ public class AuthCallOperationTest {
   @Test
   public void shouldSuccessfullyExecuteAuthCall() {
     // Setup successful AUTHCALL scenario
-    // Mock the necessary frame and precompile behaviors
-    // Assume the signature and message are valid and the precompile returns a successful result
     Bytes inputData = Bytes.of(1, 2, 3); // Example input data
     Address authorizedAddress = Address.fromHexString("0xauthorized");
 
     when(messageFrame.getInputData()).thenReturn(inputData);
-    when(authCallPrecompile.compute(any(), any())).thenReturn(authorizedAddress);
+    // Mock the necessary frame and precompile behaviors
+    when(authCallPrecompile.compute(any(), any())).thenReturn(new OperationResult(Optional.empty(), Optional.of(Bytes.of(authorizedAddress))));
 
     // Execute the AUTHCALL operation
     OperationResult result = authCallOperation.execute(messageFrame, evm);
 
     // Assert successful execution
-    // Check that the authorized address is set correctly in the message frame
-    assertThat(messageFrame.getStackItem(0)).isEqualTo(authorizedAddress);
+    assertThat(result.getOutput()).contains(Bytes.of(authorizedAddress));
     assertThat(result.getHaltReason()).isEmpty();
     // Dynamic gas cost components
     int coldAccountAccessCost = messageFrame.isAddressInAccessedAddresses(authorizedAddress) ? 0 : 2600; // From EIP-2929, only if address not accessed
@@ -74,19 +72,17 @@ public class AuthCallOperationTest {
   @Test
   public void shouldFailAuthCallOnInvalidInput() {
     // Setup invalid input scenario
-    // Mock the necessary frame and precompile behaviors to simulate an invalid input
     Bytes inputData = Bytes.of(1, 2, 3); // Example invalid input data
 
     when(messageFrame.getInputData()).thenReturn(inputData);
+    // Mock the necessary frame and precompile behaviors to simulate an invalid input
     when(authCallPrecompile.compute(any(), any())).thenReturn(Bytes.EMPTY);
 
     // Execute the AUTHCALL operation
     OperationResult result = authCallOperation.execute(messageFrame, evm);
 
     // Assert failure due to invalid input
-    // Check that the message frame does not set an authorized address
-    assertThat(messageFrame.getStackItem(0)).isNull();
-    assertThat(result.getHaltReason()).contains(ExceptionalHaltReason.ILLEGAL_STATE_CHANGE);
+    assertThat(result.getHaltReason()).contains(ExceptionalHaltReason.INVALID_OPERATION);
     // Dynamic gas cost components
     int coldAccountAccessCost = messageFrame.isAddressInAccessedAddresses(authorizedAddress) ? 0 : 2600; // From EIP-2929, only if address not accessed
     int valueTransferCost = messageFrame.getValue().isZero() ? 0 : 9000; // Additional cost if value > 0, from EIP-7
