@@ -14,7 +14,7 @@
  */
 package org.hyperledger.besu.metrics;
 
-import org.hyperledger.besu.metrics.common.MetricCategory; // Updated import
+import org.hyperledger.besu.plugin.services.metrics.MetricCategory; // Corrected import
 
 import java.util.Optional;
 
