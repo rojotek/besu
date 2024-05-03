@@ -5,9 +5,9 @@ import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
-import org.hyperledger.besu.evm.core.Gas;
 import org.hyperledger.besu.evm.precompile.PrecompileContract;
 import org.hyperledger.besu.evm.precompile.PrecompileContractRegistry;
+import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem; // Corrected import
 import org.hyperledger.besu.plugin.services.metrics.MetricsSystem;
 import org.hyperledger.besu.plugin.services.metrics.OperationTimer;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,8 +45,8 @@ public class AuthCallOperationTest {
 
     when(metricsSystem.createTimer("EVM", "AUTHCALL")).thenReturn(operationTimer);
     when(precompileContractRegistry.get(any())).thenReturn(Optional.of(authCallPrecompile));
-    when(gasCalculator.getBaseTierGasCost()).thenReturn(Gas.of(21000));
-    when(gasCalculator.getWarmStorageReadCost()).thenReturn(Gas.of(100)); // Static gas cost for warm_storage_read
+    when(gasCalculator.getBaseTierGasCost()).thenReturn(21000L);
+    when(gasCalculator.getWarmStorageReadCost()).thenReturn(100L); // Static gas cost for warm_storage_read
 
     authCallOperation = new AuthCallOperation(gasCalculator, precompileContractRegistry, metricsSystem);
   }
@@ -74,7 +74,7 @@ public class AuthCallOperationTest {
     int valueTransferCost = messageFrame.getValue().isZero() ? 0 : 9000; // Additional cost if value > 0, from EIP-7
     int emptyAddressCost = messageFrame.getWorldState().get(authorizedAddress).isEmpty() ? 25000 : 0; // Additional cost if address is empty, from EIP-2
     // Calculate the total expected gas cost
-    Gas expectedGasCost = Gas.of(gasCalculator.getWarmStorageReadCost().toInt() + coldAccountAccessCost + valueTransferCost + emptyAddressCost);
+    long expectedGasCost = 100L + coldAccountAccessCost + valueTransferCost + emptyAddressCost;
     assertThat(result.getGasCost()).contains(expectedGasCost);
   }
 
@@ -99,7 +99,7 @@ public class AuthCallOperationTest {
     int valueTransferCost = messageFrame.getValue().isZero() ? 0 : 9000; // Additional cost if value > 0, from EIP-7
     int emptyAddressCost = messageFrame.getWorldState().get(authorizedAddress).isEmpty() ? 25000 : 0; // Additional cost if address is empty, from EIP-2
     // Calculate the total expected gas cost
-    Gas expectedGasCost = Gas.of(gasCalculator.getWarmStorageReadCost().toInt() + coldAccountAccessCost + valueTransferCost + emptyAddressCost);
+    long expectedGasCost = 100L + coldAccountAccessCost + valueTransferCost + emptyAddressCost;
     assertThat(result.getGasCost()).contains(expectedGasCost);
   }
 
@@ -112,7 +112,7 @@ public class AuthCallOperationTest {
     when(messageFrame.getInputData()).thenReturn(inputData);
 
     // Calculate gas cost
-    Gas cost = authCallOperation.cost(messageFrame);
+    long cost = authCallOperation.cost(messageFrame);
 
     // Assert correct gas cost calculation as per EIP-3074
     // Dynamic gas cost components
@@ -120,7 +120,7 @@ public class AuthCallOperationTest {
     int valueTransferCost = messageFrame.getValue().isZero() ? 0 : 9000; // Additional cost if value > 0, from EIP-7
     int emptyAddressCost = messageFrame.getWorldState().get(authorizedAddress).isEmpty() ? 25000 : 0; // Additional cost if address is empty, from EIP-2
     // Calculate the total expected gas cost
-    Gas expectedGasCost = Gas.of(gasCalculator.getWarmStorageReadCost().toInt() + coldAccountAccessCost + valueTransferCost + emptyAddressCost);
+    long expectedGasCost = 100L + coldAccountAccessCost + valueTransferCost + emptyAddressCost;
     assertThat(cost).isEqualTo(expectedGasCost);
   }
 }
