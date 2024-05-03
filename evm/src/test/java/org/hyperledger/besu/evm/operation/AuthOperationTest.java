@@ -97,7 +97,7 @@ public class AuthOperationTest {
     OperationResult result = authOperation.execute(messageFrame, evm);
 
     // Assert exceptional halt
-    assertThat(result.getHaltReason()).contains(ExceptionalHaltReason.PRECOMPILE_NOT_DEFINED);
+    assertThat(result.getHaltReason()).contains(ExceptionalHaltReason.PRECOMPILE_ERROR);
   }
 
   @Test
