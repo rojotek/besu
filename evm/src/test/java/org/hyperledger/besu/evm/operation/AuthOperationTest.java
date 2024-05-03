@@ -10,13 +10,11 @@ import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.precompile.PrecompileContract;
 import org.hyperledger.besu.evm.precompile.PrecompileContractRegistry;
-import org.hyperledger.besu.plugin.services.metrics.MetricsSystem;
-import org.hyperledger.besu.plugin.services.metrics.MetricsSystem.OperationTimer;
+import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Wei;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
-import org.hyperledger.besu.evm.core.Gas;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -30,8 +28,6 @@ public class AuthOperationTest {
   @Mock private PrecompileContract authPrecompile;
   @Mock private PrecompileContractRegistry precompileContractRegistry;
   @Mock private GasCalculator gasCalculator;
-  @Mock private MetricsSystem metricsSystem;
-  @Mock private OperationTimer operationTimer;
 
   private AuthOperation authOperation;
 
@@ -42,12 +38,11 @@ public class AuthOperationTest {
     authPrecompile = mock(PrecompileContract.class);
     precompileContractRegistry = mock(PrecompileContractRegistry.class);
     gasCalculator = mock(GasCalculator.class);
-    metricsSystem = mock(MetricsSystem.class);
-    operationTimer = mock(OperationTimer.class);
 
-    when(metricsSystem.createTimer("EVM", "AUTH")).thenReturn(operationTimer);
+    NoOpMetricsSystem metricsSystem = new NoOpMetricsSystem();
+
     when(precompileContractRegistry.get(any())).thenReturn(Optional.of(authPrecompile));
-    when(gasCalculator.getBaseTierGasCost()).thenReturn(Gas.of(21000));
+    when(gasCalculator.getBaseTierGasCost()).thenReturn(21000L);
 
     authOperation = new AuthOperation(gasCalculator, precompileContractRegistry, metricsSystem);
   }
@@ -72,7 +67,7 @@ public class AuthOperationTest {
     assertThat(messageFrame.getAuthorizedAddress()).isEqualTo(authorizedAddress);
     assertThat(result.getHaltReason()).isEmpty();
     // Assert correct gas cost for successful authorization as per EIP-3074
-    assertThat(result.getGasCost()).contains(Gas.of(3000));
+    assertThat(result.getGasCost()).contains(3000L);
   }
 
   @Test
@@ -117,9 +112,9 @@ public class AuthOperationTest {
     when(messageFrame.getInputData()).thenReturn(Bytes.concatenate(message, signature));
 
     // Calculate gas cost
-    Gas cost = authOperation.cost(messageFrame);
+    long cost = authOperation.cost(messageFrame);
 
     // Assert correct gas cost calculation as per EIP-3074
-    assertThat(cost).isEqualTo(Gas.of(3000));
+    assertThat(cost).isEqualTo(3000L);
   }
 }
