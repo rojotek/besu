@@ -64,6 +64,9 @@ dependencies {
   testImplementation 'org.mockito:mockito-core'
   testImplementation 'org.mockito:mockito-junit-jupiter'
 
+  // Include metrics core as a testImplementation to avoid circular dependency in main implementation
+  testImplementation project(':metrics:core')
+
   testRuntimeOnly 'org.junit.vintage:junit-vintage-engine'
 }
 
