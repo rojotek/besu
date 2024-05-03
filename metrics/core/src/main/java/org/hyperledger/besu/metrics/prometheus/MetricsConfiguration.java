@@ -17,7 +17,7 @@ package org.hyperledger.besu.metrics.prometheus;
 import static org.hyperledger.besu.metrics.BesuMetricCategory.DEFAULT_METRIC_CATEGORIES;
 
 import org.hyperledger.besu.metrics.MetricsProtocol;
-import org.hyperledger.besu.metrics.common.MetricCategory;
+import org.hyperledger.besu.plugin.services.metrics.MetricCategory;
 
 import java.util.Arrays;
 import java.util.Collection;
