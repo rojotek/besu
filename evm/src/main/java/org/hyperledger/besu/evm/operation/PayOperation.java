@@ -49,13 +49,18 @@ public class PayOperation extends AbstractOperation {
 
   @Override
   public OperationResult execute(final MessageFrame frame, final EVM evm) {
-    final Bytes value = frame.popStackItem();
-    final Bytes addressBytes = frame.popStackItem();
+    // Cannot use PAY in static calls (would modify state)
+    if (frame.isStatic()) {
+      return new OperationResult(0, ExceptionalHaltReason.ILLEGAL_STATE_CHANGE);
+    }
 
     // PAY requires 2 items on the stack
-    if (frame.stackSize() + 2 < 2) {
+    if (frame.stackSize() < 2) {
       return new OperationResult(0, ExceptionalHaltReason.INSUFFICIENT_STACK_ITEMS);
     }
+
+    final Bytes value = frame.popStackItem();
+    final Bytes addressBytes = frame.popStackItem();
 
     // Check address high bytes are zero
     // Per EIP-5920: any non-zero values in the high 12 bytes cause the EVM to halt

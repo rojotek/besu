@@ -32,3 +32,5 @@ site/
 jitpack.yml
 /ethereum/eth/src/test/resources/tx.csv.gz
 **/**/.factorypath
+
+**/.claude/settings.local.json

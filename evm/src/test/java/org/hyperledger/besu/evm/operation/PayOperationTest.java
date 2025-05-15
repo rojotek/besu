@@ -16,6 +16,8 @@ package org.hyperledger.besu.evm.operation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -45,7 +47,14 @@ class PayOperationTest {
       Bytes32.fromHexString("0x1000000000000000000000001000000000000000000000000000000000000000");
   private static final Address RECIPIENT =
       Address.fromHexString("0x1000000000000000000000000000000000000000");
+  private static final Address SENDER_ADDRESS =
+      Address.fromHexString("0x2000000000000000000000000000000000000000");
+  private static final Address NEW_ACCOUNT_ADDRESS =
+      Address.fromHexString("0x3000000000000000000000000000000000000000");
+  // ECRECOVER precompile address
+  private static final Address PRECOMPILE_ADDRESS = Address.ECREC;
   private static final Wei TRANSFER_AMOUNT = Wei.of(100);
+  private static final Wei ZERO_AMOUNT = Wei.ZERO;
 
   @Mock private MessageFrame messageFrame;
   @Mock private WorldUpdater worldUpdater;
@@ -63,6 +72,10 @@ class PayOperationTest {
     lenient().when(messageFrame.getWorldUpdater()).thenReturn(worldUpdater);
     lenient().when(worldUpdater.getSenderAccount(messageFrame)).thenReturn(senderAccount);
     lenient().when(worldUpdater.getOrCreate(RECIPIENT)).thenReturn(recipientAccount);
+    // For sender address
+    lenient().when(messageFrame.getRecipientAddress()).thenReturn(SENDER_ADDRESS);
+    // Default to non-static context
+    lenient().when(messageFrame.isStatic()).thenReturn(false);
   }
 
   @Test
@@ -73,7 +86,7 @@ class PayOperationTest {
         .thenReturn(
             Bytes32.leftPad(Bytes.ofUnsignedLong(TRANSFER_AMOUNT.getAsBigInteger().longValue())),
             ACCOUNT_ADDRESS);
-    when(messageFrame.stackSize()).thenReturn(0);
+    when(messageFrame.stackSize()).thenReturn(2);
     when(messageFrame.warmUpAddress(RECIPIENT)).thenReturn(true); // Address is already warm
     when(senderAccount.getBalance()).thenReturn(Wei.of(1000)); // Enough balance
 
@@ -97,7 +110,7 @@ class PayOperationTest {
         .thenReturn(
             Bytes32.leftPad(Bytes.ofUnsignedLong(TRANSFER_AMOUNT.getAsBigInteger().longValue())),
             ACCOUNT_ADDRESS);
-    when(messageFrame.stackSize()).thenReturn(0);
+    when(messageFrame.stackSize()).thenReturn(2);
     when(messageFrame.warmUpAddress(RECIPIENT)).thenReturn(false); // Address is cold
     when(senderAccount.getBalance()).thenReturn(Wei.of(1000)); // Enough balance
 
@@ -114,15 +127,34 @@ class PayOperationTest {
   }
 
   @Test
+  void shouldTransferZeroValue() {
+    // Configure frame with zero value transfer amount
+    when(messageFrame.getRemainingGas()).thenReturn(10000L);
+    when(messageFrame.popStackItem()).thenReturn(Bytes32.ZERO, ACCOUNT_ADDRESS);
+    when(messageFrame.stackSize()).thenReturn(2);
+    when(messageFrame.warmUpAddress(RECIPIENT)).thenReturn(true);
+    when(senderAccount.getBalance()).thenReturn(Wei.of(1000));
+
+    // Execute operation
+    OperationResult result = operation.execute(messageFrame, null);
+
+    // Verify successful zero-value transfer
+    verify(messageFrame).decrementRemainingGas(gasCalculator.getWarmStorageReadCost());
+    verify(senderAccount).decrementBalance(ZERO_AMOUNT);
+    verify(recipientAccount).incrementBalance(ZERO_AMOUNT);
+
+    assertThat(result.getHaltReason()).isNull();
+    assertThat(result.getGasCost()).isEqualTo(gasCalculator.getWarmStorageReadCost());
+  }
+
+  @Test
   void shouldFailForInvalidAddressWithHighBytesSet() {
     // Configure frame with an invalid address (high bytes set)
-    lenient().when(messageFrame.getRemainingGas()).thenReturn(10000L);
-    lenient()
-        .when(messageFrame.popStackItem())
+    when(messageFrame.stackSize()).thenReturn(2);
+    when(messageFrame.popStackItem())
         .thenReturn(
             Bytes32.leftPad(Bytes.ofUnsignedLong(TRANSFER_AMOUNT.getAsBigInteger().longValue())),
             INVALID_ACCOUNT_WITH_HIGH_BYTES);
-    lenient().when(messageFrame.stackSize()).thenReturn(0);
 
     // Execute operation
     OperationResult result = operation.execute(messageFrame, null);
@@ -139,7 +171,7 @@ class PayOperationTest {
         .thenReturn(
             Bytes32.leftPad(Bytes.ofUnsignedLong(TRANSFER_AMOUNT.getAsBigInteger().longValue())),
             ACCOUNT_ADDRESS);
-    when(messageFrame.stackSize()).thenReturn(0);
+    when(messageFrame.stackSize()).thenReturn(2);
     when(messageFrame.warmUpAddress(RECIPIENT)).thenReturn(true);
 
     // Execute operation
@@ -157,7 +189,7 @@ class PayOperationTest {
         .thenReturn(
             Bytes32.leftPad(Bytes.ofUnsignedLong(TRANSFER_AMOUNT.getAsBigInteger().longValue())),
             ACCOUNT_ADDRESS);
-    when(messageFrame.stackSize()).thenReturn(0);
+    when(messageFrame.stackSize()).thenReturn(2);
     when(messageFrame.warmUpAddress(RECIPIENT)).thenReturn(true);
     when(senderAccount.getBalance()).thenReturn(Wei.of(10)); // Not enough balance
 
@@ -166,5 +198,132 @@ class PayOperationTest {
 
     // Verify operation failed due to insufficient balance
     assertThat(result.getHaltReason()).isEqualTo(ExceptionalHaltReason.ILLEGAL_STATE_CHANGE);
+  }
+
+  @Test
+  void shouldFailInStaticCall() {
+    // Configure frame as static call
+    when(messageFrame.isStatic()).thenReturn(true);
+    
+    // Execute operation
+    OperationResult result = operation.execute(messageFrame, null);
+
+    // Verify operation failed due to static call
+    assertThat(result.getHaltReason()).isEqualTo(ExceptionalHaltReason.ILLEGAL_STATE_CHANGE);
+    verify(messageFrame, never()).popStackItem();
+  }
+
+  @Test
+  void shouldFailWithInsufficientStackItems() {
+    // Configure stack with not enough items
+    when(messageFrame.stackSize()).thenReturn(1); // Only one item on stack
+    
+    // Execute operation
+    OperationResult result = operation.execute(messageFrame, null);
+
+    // Verify operation failed due to insufficient stack items
+    assertThat(result.getHaltReason()).isEqualTo(ExceptionalHaltReason.INSUFFICIENT_STACK_ITEMS);
+  }
+  
+  @Test
+  void shouldHandleSelfTransfer() {
+    // Create self-transfer scenario where sender sends to its own address
+    final Bytes32 SENDER_BYTES = 
+        Bytes32.fromHexString("0x0000000000000000000000002000000000000000000000000000000000000000");
+    final Wei INITIAL_BALANCE = Wei.of(1000);
+    
+    // Setup for self-transfer
+    when(messageFrame.stackSize()).thenReturn(2);
+    when(messageFrame.popStackItem())
+        .thenReturn(
+            Bytes32.leftPad(Bytes.ofUnsignedLong(TRANSFER_AMOUNT.getAsBigInteger().longValue())),
+            SENDER_BYTES);
+    when(messageFrame.getRemainingGas()).thenReturn(10000L);
+    when(senderAccount.getBalance()).thenReturn(INITIAL_BALANCE);
+    
+    // We need to mock that worldUpdater.getOrCreate returns the same sender account
+    when(worldUpdater.getOrCreate(SENDER_ADDRESS)).thenReturn(senderAccount);
+    when(messageFrame.warmUpAddress(SENDER_ADDRESS)).thenReturn(true);
+    
+    // Execute operation
+    OperationResult result = operation.execute(messageFrame, null);
+    
+    // Verify operation succeeded
+    assertThat(result.getHaltReason()).isNull();
+    
+    // Verify gas was charged
+    verify(messageFrame).decrementRemainingGas(gasCalculator.getWarmStorageReadCost());
+    
+    // Verify that balance was "transferred" (removed and then added back)
+    verify(senderAccount).decrementBalance(TRANSFER_AMOUNT);
+    verify(senderAccount).incrementBalance(TRANSFER_AMOUNT);
+  }
+  
+  @Test
+  void shouldCreateNewAccountOnTransfer() {
+    // Setup for new account creation
+    final Bytes32 NEW_ACCOUNT_BYTES = 
+        Bytes32.fromHexString("0x0000000000000000000000003000000000000000000000000000000000000000");
+    final Wei INITIAL_BALANCE = Wei.of(1000);
+    final MutableAccount newAccount = mock(MutableAccount.class);
+    
+    when(messageFrame.stackSize()).thenReturn(2);
+    when(messageFrame.popStackItem())
+        .thenReturn(
+            Bytes32.leftPad(Bytes.ofUnsignedLong(TRANSFER_AMOUNT.getAsBigInteger().longValue())),
+            NEW_ACCOUNT_BYTES);
+    when(messageFrame.getRemainingGas()).thenReturn(10000L);
+    when(senderAccount.getBalance()).thenReturn(INITIAL_BALANCE);
+    
+    // Mock worldUpdater to return our new account mock when getOrCreate is called
+    when(worldUpdater.getOrCreate(NEW_ACCOUNT_ADDRESS)).thenReturn(newAccount);
+    when(messageFrame.warmUpAddress(NEW_ACCOUNT_ADDRESS)).thenReturn(false); // Cold account access
+    
+    // Execute operation
+    OperationResult result = operation.execute(messageFrame, null);
+    
+    // Verify operation succeeded
+    assertThat(result.getHaltReason()).isNull();
+    
+    // Verify gas cost for cold account access was charged
+    verify(messageFrame).decrementRemainingGas(gasCalculator.getColdAccountAccessCost());
+    
+    // Verify that balance was transferred from sender to the new account
+    verify(senderAccount).decrementBalance(TRANSFER_AMOUNT);
+    verify(newAccount).incrementBalance(TRANSFER_AMOUNT);
+  }
+  
+  @Test
+  void shouldTransferToPrecompileAddress() {
+    // Create test for transferring to a precompile address (ECRECOVER = 0x01)
+    final Bytes32 PRECOMPILE_BYTES = 
+        Bytes32.fromHexString("0x0000000000000000000000000000000000000000000000000000000000000001");
+    final Wei INITIAL_BALANCE = Wei.of(1000);
+    final MutableAccount precompileAccount = mock(MutableAccount.class);
+    
+    when(messageFrame.stackSize()).thenReturn(2);
+    when(messageFrame.popStackItem())
+        .thenReturn(
+            Bytes32.leftPad(Bytes.ofUnsignedLong(TRANSFER_AMOUNT.getAsBigInteger().longValue())),
+            PRECOMPILE_BYTES);
+    when(messageFrame.getRemainingGas()).thenReturn(10000L);
+    when(senderAccount.getBalance()).thenReturn(INITIAL_BALANCE);
+    
+    // Mock isPrecompile in the gas calculator (used in warmUpAddress)
+    when(messageFrame.warmUpAddress(PRECOMPILE_ADDRESS)).thenReturn(true); // Precompiles are warm
+    when(worldUpdater.getOrCreate(PRECOMPILE_ADDRESS)).thenReturn(precompileAccount);
+    
+    // Execute operation
+    OperationResult result = operation.execute(messageFrame, null);
+    
+    // Verify operation succeeded
+    assertThat(result.getHaltReason()).isNull();
+    
+    // Verify warm access gas was charged (precompiles are always warm)
+    verify(messageFrame).decrementRemainingGas(gasCalculator.getWarmStorageReadCost());
+    
+    // Verify that balance was transferred from sender to the precompile account
+    verify(senderAccount).decrementBalance(TRANSFER_AMOUNT);
+    verify(precompileAccount).incrementBalance(TRANSFER_AMOUNT);
   }
 }
